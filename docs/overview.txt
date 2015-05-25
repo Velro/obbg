@@ -9,6 +9,13 @@ obbg:
   - networking
 
 Done in today's stream:
+
+Previous stream:
+   -  fog dist from view dist
+   -  improve height-field
+   -  other terrain features
+
+Previous stream:
    -  threaded procgen&meshing
 
 Previous stream:
