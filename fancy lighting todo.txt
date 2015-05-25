@@ -1,0 +1,29 @@
+overall todos
+
+spotlights and point lights at the same time
+colored lights
+
+--------------------------------------------
+
+spotlight todos
+
+handle warnings thrown by gizmo
+reconcile gizmo with actual spotlight
+'f' key to toggle spotlight
+shader struct input for spotlight params
+more user friendly interface
+multiple spotlights at once
+
+--------------------------------------------
+
+point light todos
+
+multiple pointlights at once
+colored pointlights
+more granular control of size, falloff
+
+--------------------------------------------
+
+direction light todos
+
+realtime directional for day/night

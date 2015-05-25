@@ -44,7 +44,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>src;src\win32;src\3rd;$(SolutionDir)..\include;$(SolutionDir)..\stb\stb.h;$(SolutionDir)..\stb\stb_image.h;$(SolutionDir)..\stb\stb_easy_font.h;$(SolutionDir)..\stb\stb_voxel_renderer.h</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;src\win32;src\3rd;$(SolutionDir)..\include;$(SolutionDir)..\stb\</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -79,6 +79,7 @@
     <ClInclude Include="..\..\src\stb_gl.h" />
     <ClInclude Include="..\..\src\stb_glprog.h" />
     <ClInclude Include="..\..\src\u_noise.h" />
+    <ClInclude Include="..\..\src\vector_math.h" />
     <ClInclude Include="..\..\stb\stb.h" />
     <ClInclude Include="..\..\stb\stb_c_lexer.h" />
     <ClInclude Include="..\..\stb\stb_divide.h" />
@@ -98,6 +99,7 @@
     <ClInclude Include="..\..\stb\stretchy_buffer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\fancy_lighting.c" />
     <ClCompile Include="..\..\src\main.c" />
     <ClCompile Include="..\..\src\mesh_builder.c" />
     <ClCompile Include="..\..\src\texture_loader.cpp" />

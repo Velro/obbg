@@ -16,5 +16,6 @@ extern void swap_requested_meshes(void);
 extern mesh_chunk *build_mesh_chunk_for_coord(int x, int y);
 extern void upload_mesh(mesh_chunk *mc, uint8 *vertex_build_buffer, uint8 *face_buffer);
 extern void set_mesh_chunk_for_coord(int x, int y, mesh_chunk *new_mc);
+extern char *get_fancy_lighting_function(void);
 
 #endif

@@ -19,27 +19,33 @@ static GLuint vox_tex[2];
 
 void init_voxel_render(int voxel_tex[2])
 {
-   char *binds[] = { "attr_vertex", "attr_face", NULL };
-   char *vertex;
-   char *fragment;
+	char *binds[] = { "attr_vertex", "attr_face", NULL };
+	char *vertex;
+	char fragment[10000];//TODO better string-foo...
+	char *fancy_lighting_function;
 
-   vertex = stbvox_get_vertex_shader();
-   fragment = stbvox_get_fragment_shader();
+	vertex = stbvox_get_vertex_shader();
+	strcpy(fragment, stbvox_get_fragment_shader());
 
-   {
-      char error_buffer[1024];
-      char *main_vertex[] = { vertex, NULL };
-      char *main_fragment[] = { fragment, NULL };
-      int which_failed;
-      main_prog = stbgl_create_program(main_vertex, main_fragment, binds, error_buffer, sizeof(error_buffer), &which_failed);
-      if (main_prog == 0) {
-         char *prog = which_failed == STBGL_FAILURE_STAGE_VERTEX ? vertex : fragment;
-         stb_filewrite("obbg_failed_shader.txt", prog, strlen(prog));
-         ods("Compile error for main shader: %s\n", error_buffer);
-         assert(0);
-         exit(1);
-      }
-   }
+
+	fancy_lighting_function = get_fancy_lighting_function();
+	strcat(fragment, fancy_lighting_function);
+
+	{
+		char error_buffer[1024];
+		char *main_vertex[] = { vertex, NULL };
+		char *main_fragment[] = { fragment, NULL };
+		int which_failed;
+		main_prog = stbgl_create_program(main_vertex, main_fragment, binds, error_buffer, sizeof(error_buffer), &which_failed);
+		if (main_prog == 0) {
+			char *prog = which_failed == STBGL_FAILURE_STAGE_VERTEX ? vertex : fragment;
+			stb_filewrite("obbg_failed_shader.txt", prog, strlen(prog));
+			ods("Compile error for main shader: %s\n", error_buffer);
+			assert(0);
+			exit(1);
+		}
+	}
+
 
    vox_tex[0] = voxel_tex[0];
    vox_tex[1] = voxel_tex[1];

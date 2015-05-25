@@ -299,9 +299,9 @@ void process_tick_raw(float dt)
    camloc[1] += cam_vel[1] * dt;
    camloc[2] += cam_vel[2] * dt;
 
-   light_pos[0] += light_vel[0] * dt;
-   light_pos[1] += light_vel[1] * dt;
-   light_pos[2] += light_vel[2] * dt;
+   light_pos[0] = camloc[0];//+= light_vel[0] * dt;
+   light_pos[1] = camloc[1];//+= light_vel[1] * dt;
+   light_pos[2] = camloc[2];//+= light_vel[2] * dt;
 
    view_x_vel *= (float) pow(0.75, dt);
    view_z_vel *= (float) pow(0.75, dt);
@@ -474,7 +474,7 @@ void render_objects(void)
 	   5, 10,
 	   color);   //radius and cutoff
 
-   stbgl_drawBox(light_pos[0], light_pos[1], light_pos[2], 3,3,3, 0);
+   //stbgl_drawBox(light_pos[0], light_pos[1], light_pos[2], 3,3,3, 0);
 }
 
 

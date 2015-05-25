@@ -19,7 +19,8 @@
 #define STBVOX_CONFIG_DISABLE_TEX2
 #define STBVOX_CONFIG_OPENGL_MODELVIEW
 //#define STBVOX_CONFIG_PREFER_TEXBUFFER
-#define STBVOX_CONFIG_LIGHTING_SIMPLE
+#define STBVOX_CONFIG_LIGHTING//maybe we should move this def to voxel_render.c ?
+#define STBVOX_ICONFIG_LIGHTING//TODO works when defined here, not in fancy_lighting.c? would make more sense over there
 #define STBVOX_CONFIG_FOG_SMOOTHSTEP
 //#define STBVOX_CONFIG_PREMULTIPLIED_ALPHA  // this doesn't work properly alpha test without next #define
 //#define STBVOX_CONFIG_UNPREMULTIPLY  // slower, fixes alpha test makes windows & fancy leaves look better
