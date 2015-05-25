@@ -31,6 +31,8 @@
 
 #include "obbg_funcs.h"
 
+#include "vector_math.h"
+
 char *game_name = "obbg";
 
 
@@ -394,60 +396,13 @@ void stbgl_drawRectTCArray(float x0, float y0, float x1, float y1, float s0, flo
    glEnd();
 }
 
-//http://slabode.exofire.net/circle_draw.shtml
-void draw_circle(float posX, float posY, float posZ, 
-	float dirX, float dirY, float dirZ, 
-				float r, int num_segments)
+void draw_spotlight_gizmo(vec3f pos,
+	vec3f dir,
+	float radius,
+	float cutOff,
+	vec3f color)
 {
-	float theta = 2 * 3.1415926 / (float)(num_segments);
-	float c = cosf(theta);//precalculate the sine and cosine
-	float s = sinf(theta);
-	float t;
-
-	float x = r;//we start at angle = 0 
-	float y = 0;
-
-	//all of this should be put into a LookAt(pos||dir) vector math function
-	float defaultLookDir[] = { 0, 0, 1 };
-	float lookDir[] = { dirX, dirY, dirZ };
-
-	float dotProduct = (defaultLookDir[0] * lookDir[0]) +
-		(defaultLookDir[1] * lookDir[1]) +
-		(defaultLookDir[2] * lookDir[2]);
-	float defaultLookDirLength = 1;//assumed
-	float lookDirLength = sqrt(lookDir[0] * lookDir[0] + lookDir[1] * lookDir[1] + lookDir[2] * lookDir[2]);//we should probably normalize this to a unit vector?
-	float angleBetween = acosf(dotProduct / (defaultLookDirLength * lookDirLength));//in radians
-	float angleBetweenDegrees = angleBetween * 57.2957795;//rad to degrees, this is probably #defined somewhere...
-
-	float crossProduct[] = {
-		defaultLookDir[1] * lookDir[2] - defaultLookDir[2] * lookDir[1],
-		defaultLookDir[2] * lookDir[0] - defaultLookDir[0] * lookDir[2],
-		defaultLookDir[0] * lookDir[1] - defaultLookDir[1] * lookDir[0]
-	};
-
-	glPushMatrix();
-	glTranslatef(posX, posY, posZ);
-	glRotatef(angleBetweenDegrees, crossProduct[0], crossProduct[1], crossProduct[2]);
-	glBegin(GL_LINE_LOOP);
-	for (int ii = 0; ii < num_segments; ii++)
-	{
-		glVertex3f(x, y, 0);//output vertex 
-
-		//apply the rotation matrix
-		t = x;
-		x = c * x - s * y;
-		y = s * t + c * y;
-	}
-	glEnd();
-	glPopMatrix();
-}
-
-void draw_spotlight_gizmo(float posX, float posY, float posZ,
-						  float dirX, float dirY, float dirZ,
-						  float radius,
-						  float cutOff)
-{
-	float theta = 2 * 3.1415926 / (float)(100);
+	float theta = 2 * PI / (float)(100);
 	float c = cosf(theta);//precalculate the sine and cosine
 	float s = sinf(theta);
 	float t;
@@ -455,39 +410,30 @@ void draw_spotlight_gizmo(float posX, float posY, float posZ,
 	float x = radius;//we start at angle = 0 
 	float y = 0;
 
-	float directions[4][2];
+	vec3f defaultLookDir;
+	defaultLookDir.x = 0;
+	defaultLookDir.y = 0;
+	defaultLookDir.z = 1;
 
-	//all of this should be put into a LookAt(pos||dir) vector math function
-	float defaultLookDir[] = { 0, 0, 1 };
-	float lookDir[] = { dirX, dirY, dirZ };
 
-	float dotProduct = (defaultLookDir[0] * lookDir[0]) +
-		(defaultLookDir[1] * lookDir[1]) +
-		(defaultLookDir[2] * lookDir[2]);
+	float dotResult = vec3f_dot_product(defaultLookDir, dir);
 	float defaultLookDirLength = 1;//assumed
-	float lookDirLength = sqrt(lookDir[0] * lookDir[0] + lookDir[1] * lookDir[1] + lookDir[2] * lookDir[2]);//we should probably normalize this to a unit vector?
-	//normalize 
-	lookDir[0] = lookDir[0] / lookDirLength; 
-	lookDir[1] = lookDir[1] / lookDirLength; 
-	lookDir[2] = lookDir[2] / lookDirLength;
-	float angleBetween = acosf(dotProduct / (defaultLookDirLength * lookDirLength));//in radians
-	float angleBetweenDegrees = angleBetween * 57.2957795;//rad to degrees, this is probably #defined somewhere...
+	float lookDirLength = vec3f_length(dir);//we should probably normalize this to a unit vector?
+	float angleBetween = acosf(dotResult / (defaultLookDirLength * lookDirLength));//in radians
+	float angleBetweenDegrees = angleBetween * rad2deg;//rad to degrees, this is probably #defined somewhere...
 
-	float crossProduct[] = {
-		defaultLookDir[1] * lookDir[2] - defaultLookDir[2] * lookDir[1],
-		defaultLookDir[2] * lookDir[0] - defaultLookDir[0] * lookDir[2],
-		defaultLookDir[0] * lookDir[1] - defaultLookDir[1] * lookDir[0]
-	};
+	vec3f crossProd = vec3f_cross_product(defaultLookDir, dir);
 
 	glPushMatrix();
-	glTranslatef(posX, posY, posZ);
-	stbgl_drawBox(0, 0, 0, 0.1f, 0.1f, 0.1f, 0);
-	
-	glTranslatef(lookDir[0] * cutOff, lookDir[1] * cutOff, lookDir[2] * cutOff);
-	stbgl_drawBox(0, 0, 0, 0.1f, 0.1f, 0.1f, 0);
+	glColor3f(color.x, color.y, color.z);
 
+	glTranslatef(pos.x, pos.y, pos.z);
+	stbgl_drawBox(0, 0, 0, 1, 1, 1, 1);
+	glRotatef(angleBetweenDegrees, crossProd.x, crossProd.y, crossProd.z);
+	glTranslatef(0, 0, cutOff);
 
-	glRotatef(angleBetweenDegrees, crossProduct[0], crossProduct[1], crossProduct[2]);
+	stbgl_drawBox(0, 0, 0, 1, 1, 1, 1);
+
 	glBegin(GL_LINE_LOOP);
 	for (int ii = 0; ii < 100; ii++)
 	{
@@ -499,8 +445,7 @@ void draw_spotlight_gizmo(float posX, float posY, float posZ,
 		y = s * t + c * y;
 	}
 	glEnd();
-
-
+	glColor3f(1, 1, 1);
 	glPopMatrix();
 }
 
@@ -508,10 +453,27 @@ void render_objects(void)
 {
    glColor3f(1,1,1);
    glDisable(GL_TEXTURE_2D);
-   draw_spotlight_gizmo(0, 0, 120, //pos
-			   1, 0, 0,   //dir
-			   5, 10);   //radius and cutoff
-   
+   vec3f spotlight_gizmo_pos;
+   spotlight_gizmo_pos.x = 0;
+   spotlight_gizmo_pos.y = 0;
+   spotlight_gizmo_pos.z = 120;
+
+   vec3f spotlight_gizmo_dir;
+   spotlight_gizmo_dir.x = 1;
+   spotlight_gizmo_dir.y = 0;
+   spotlight_gizmo_dir.z = 0;
+
+   vec3f color;
+   color.x = 0;
+   color.y = 1;
+   color.z = 0;
+
+   draw_spotlight_gizmo(
+	   spotlight_gizmo_pos, //pos
+	   spotlight_gizmo_dir,   //dir
+	   5, 10,
+	   color);   //radius and cutoff
+
    stbgl_drawBox(light_pos[0], light_pos[1], light_pos[2], 3,3,3, 0);
 }
 

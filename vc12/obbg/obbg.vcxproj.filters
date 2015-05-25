@@ -90,6 +90,9 @@
     <ClInclude Include="..\..\src\3rd\crn_decomp.h">
       <Filter>src\3rd</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\vector_math.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\stb\stb_vorbis.c">
@@ -112,6 +115,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\win32\SDL_windows_main.c">
       <Filter>src\win32</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\fancy_lighting.c">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
