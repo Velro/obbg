@@ -2,6 +2,7 @@
 #define INCLUDE_OBBG_DATA_H
 
 #include <assert.h>
+#include "vector_math.h"
 
 #define true   (0==0)
 #define false  (0==1)
@@ -89,6 +90,22 @@ typedef struct
    int x,y;
    int state;
 } requested_mesh;
+
+typedef union 
+{
+	float E[11];
+	struct
+	{
+		vec3f pos;
+		vec3f dir;
+		float cosCutOff;//aperture of cone
+		float spotExponent;//falloff from center
+		float constantAttenuation;//depth
+		float linearAttenuation;//depth
+		float quadraticAttenuation;//depth
+	};
+} spotlight;
+
 
 extern int chunk_locations, chunks_considered, chunks_in_frustum;
 extern int quads_considered, quads_rendered;

@@ -1,5 +1,5 @@
-#ifndef INCLUDE_STB_VOXEL_RENDER_H
-#define INCLUDE_STB_VOXEL_RENDER_H
+#ifndef INCLUDE_VECTOR_MATH
+#define INCLUDE_VECTOR_MATH
 
 #include <math.h>
 #include <assert.h>
@@ -11,84 +11,28 @@
 //this should probably be defined in a more general file
 #define PI 3.14159265
 
-//this should probably be defined in a more general file
-//TODO try Casey's union v2 on episode 042-ish so we can do array initialization and access
-//might not be possible in C ?
-typedef struct
+//would be nice to be able to initialize as
+//vec3f example = {1, 2};
+//not sure if that is possible
+typedef union
 {
-	float x, y, z;
+	
+	struct {
+		float x, y, z;
+	};
+	float E[3];
 } vec3f;
 
-typedef struct
-{
-	float x, y, z, w;
-} vec4f;
+// TODO(casey): Consider v2 A = v2{5, 3}; ?
+//inline vec3f
+vec3f Vec3f(float x, float y, float z);
 
-//
-//
-//
+float vec3f_length(vec3f a);
+float vec3f_dot_product(vec3f a, vec3f b);
+vec3f vec3f_normalize(vec3f a);
+vec3f vec3f_cross_product(vec3f a, vec3f b);
 
-float vec3f_length(vec3f a)
-{
-	float result;
-	result = sqrt(a.x * a.x + a.y * a.y * a.z * a.z);
-	return result;
-}
 
-float length(vec4f a)
-{
-	return 0;
-}
-
-float vec3f_dot_product(vec3f a, vec3f b)
-{
-	float result;
-	result = 
-		(a.x * b.x) +
-		(a.y * b.y) +
-		(a.z * b.z);
-
-	return result;
-}
-
-vec3f vec3f_normalize(vec3f a)
-{
-	vec3f result;
-	float l = vec3f_length(a);
-	result.x = a.x / l;
-	result.y = a.y / l;
-	result.z = a.z / l;
-
-	return result;
-}
-
-vec3f vec3f_cross_product(vec3f a, vec3f b)
-{
-	vec3f result;
-
-	result.x = a.y * b.z - a.z * b.y;
-	result.y = a.z * b.x - a.x * b.z;
-	result.z = a.x * b.y - a.y * b.x;
-
-	return result;
-}
-
-//@TODO implement these
-/*
-vec3f vec3f_clamp(vec3f a)
-{
-
-}
-
-vec3f vec3f_length(vec3f a)
-{
-
-}
-
-float vec3f_angle(vec3f a, vec3f b)
-{
-
-}
-*/
-
+vec3f vec3f_clamp(vec3f a);//@TODO implement this!
+float vec3f_angle(vec3f a, vec3f b);//@TODO implement this!
 #endif

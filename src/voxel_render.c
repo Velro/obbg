@@ -129,8 +129,13 @@ void setup_uniforms(float pos[3])
                table4[0][2] =  0.9f;
                table4[0][3] = 0;
 
-               amb[1][0] = 0.3f; amb[1][1] = 0.3f; amb[1][2] = 0.3f; // dark-grey
-               amb[2][0] = 1.0; amb[2][1] = 1.0; amb[2][2] = 1.0; // white
+			   //"day"
+               //amb[1][0] = 0.3f; amb[1][1] = 0.3f; amb[1][2] = 0.3f; // dark-grey
+               //amb[2][0] = 1.0; amb[2][1] = 1.0; amb[2][2] = 1.0; // white
+
+			   //"night"
+			   amb[1][0] = 0.1f; amb[1][1] = 0.1f; amb[1][2] = 0.1f; // dark-grey
+			   amb[2][0] = 0.3; amb[2][1] = 0.3; amb[2][2] = 0.3; // white
 
                // convert so (table[1]*dot+table[2]) gives
                // above interpolation
@@ -242,9 +247,10 @@ void upload_mesh(mesh_chunk *mc, uint8 *vertex_build_buffer, uint8 *face_buffer)
 }
 
 extern int num_threads_active, num_meshes_started, num_meshes_uploaded;
-extern float light_pos[3];
+extern float spot_light_pos[3];
+extern float point_light_pos[3];
 
-
+extern vec3f cam_forward_dir;
 
 
 #define MAX_CONSIDER_MESHES 4096
@@ -336,15 +342,28 @@ void render_voxel_world(float campos[3])
    {
       float lighting[2][3] = { { 0,0,0 }, { 0.75,0.75,0.65f } };
       float bright = 32;
-      lighting[0][0] = light_pos[0];
-      lighting[0][1] = light_pos[1];
-      lighting[0][2] = light_pos[2];
+      lighting[0][0] = point_light_pos[0];
+	  lighting[0][1] = point_light_pos[1];
+	  lighting[0][2] = point_light_pos[2];
       lighting[1][0] *= bright;
       lighting[1][1] *= bright;
       lighting[1][2] *= bright;
       stbglUniform3fv(stbgl_find_uniform(main_prog, "light_source"), 2, lighting[0]);
    }
 
+   {
+	   spotlight spot;
+	   spot.pos = Vec3f(spot_light_pos[0], spot_light_pos[1], spot_light_pos[2]);
+	   spot.dir = cam_forward_dir;
+	   spot.cosCutOff = 0.9f;
+	   spot.spotExponent = 80;
+	   spot.constantAttenuation = 0;
+	   spot.linearAttenuation = 0.01f;
+	   spot.quadraticAttenuation = 0.01f;
+							   
+	   //spotlights = spot;
+	   stbglUniform1fv(stbgl_find_uniform(main_prog, "spotlights"), 11, &spot.E[0]);
+   }
    quads_rendered = 0;
    quads_considered = 0;
    chunk_storage_rendered = 0;
@@ -450,4 +469,25 @@ void render_voxel_world(float campos[3])
    glActiveTextureARB(GL_TEXTURE0_ARB);
 
    stbglUseProgram(0);
+}
+
+void cat_strings(int a_count, char *a,
+	int b_count, char *b,
+	int dest_count, char *dest)
+{
+	for (int Index = 0;
+		Index < a_count;
+		++Index)
+	{
+		*dest++ = *a++;
+	}
+
+	for (int Index = 0;
+		Index < b_count;
+		++Index)
+	{
+		*dest++ = *b++;
+	}
+
+	*dest++ = 0;
 }

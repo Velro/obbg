@@ -2,56 +2,67 @@
 #include "obbg_data.h"
 #include "obbg_funcs.h"
 #include "stb_voxel_render.h"
+#include "vector_math.h"
 
 
 
 //TODO point light struct containing position, direction, aperture angle, cutoff
 static char* fancy_lighting = {
-"\n" //Point light implementation based on http://www.lighthouse3d.com/tutorials/glsl-tutorial/spot-light-per-pixel/
-"struct spotlight{\n"
-"    vec3 position;\n"
-"};\n"
+	"\n" //Point light implementation based on http://www.lighthouse3d.com/tutorials/glsl-tutorial/spot-light-per-pixel/
+	"struct spotlight{\n"
+	"    vec3 position;\n"
+	"    vec3 dir;\n"
+	"    float cosCutoff;\n"//aperture of cone
+	"    float spotExponent;\n"//falloff from center
+	"    float constantAttenuation;\n"//depth
+	"    float linearAttenuation;\n"//depth
+	"    float quadraticAttenuation;\n"//depth
+	"};\n"
 
-"float spotlightCount = 2;\n"
-"uniform vec3 light_source[2];\n"
-"uniform float light_source_cosCutOff = 0.85f;\n"//aperture of light, between 0 and 1
-"uniform vec3 light_source_spotDir = vec3(0.0,1.0,0.0);\n"//hardcoded for now, pull this from struct
-"uniform float light_source_spotExponent = 1.0f;\n"//decay from center of cone to edges, larger the value the faster the decay
-"uniform float light_source_constantAttenuation = 0.0;\n"//different depth decays, larger the faster the dieoff
-"uniform float light_source_linearAttenuation = 0.1;\n"//different depth decays, larger the faster the dieoff
-"uniform float light_source_quadraticAttenuation = 0.1;\n"//different depth decays, larger the faster the dieoff
+	"int spotlightCount = 1;\n"
+	//TODO find a better way to pass this data, or if there's a way to cast an array to struct?
+	"uniform float spotlights[11];\n"//can't pass array of structs ... http://pyopengl.sourceforge.net/context/tutorials/shader_7.html
 
-"\n"
-"vec3 compute_lighting(vec3 pos, vec3 norm, vec3 albedo, vec3 ambient)\n"
-"{\n"
-
-"   vec3 n,halfV;\n"
-"   float NdotL,NdotHV;\n"
-"   vec3 color = albedo * ambient;\n"
-"   float att,spotEffect;\n"
-"   n = normalize(norm);\n"
-"   for (int i = 0; i < spotlightCount; i++){\n"
-"   \n"
-"   }\n"
-"   vec3 dirToSource = vec3(light_source[0] - pos);\n"
-
-"   float distToSource = length(dirToSource);\n"
-
-"   NdotL = max(dot(n,normalize(dirToSource)),0.0);\n"
-"   if (NdotL > 0.0){\n"
-"      spotEffect = dot(normalize(light_source_spotDir), normalize(-dirToSource));\n"
-"      if (spotEffect > light_source_cosCutOff){\n"
-"          spotEffect = pow(spotEffect, light_source_spotExponent);\n"
-"			att = spotEffect / (light_source_constantAttenuation +\n"
-"				light_source_linearAttenuation * distToSource +\n"
-"				light_source_quadraticAttenuation * distToSource * distToSource);\n"
-"				color += att * (albedo * NdotL);\n"
-"      }\n"
-"   }\n"//end of (NdotL > 0.0)
-"   return color;\n"
-"}\n"//end of function
+	"\n"
+	"vec3 compute_lighting(vec3 pos, vec3 norm, vec3 albedo, vec3 ambient)\n"
+	"{\n"
+	"    spotlight light;\n"
+	"    vec3 n,halfV;\n"
+	"    float NdotL,NdotHV;\n"
+	"    vec3 color = albedo * ambient;\n"
+	"    float att,spotEffect;\n"
+	"    n = normalize(norm);\n"
+	"    for (int i = 0; i < spotlightCount; i++){\n"
+	//ugliness ahead
+	"        light.position.x = spotlights[0];\n"
+	"        light.position.y = spotlights[1];\n"
+	"        light.position.z = spotlights[2];\n"
+	"        light.dir.x = spotlights[3];\n"
+	"        light.dir.y = spotlights[4];\n"
+	"        light.dir.z = spotlights[5];\n"
+	"        light.cosCutoff = spotlights[6];\n"
+	"        light.spotExponent = spotlights[7];\n"
+	"        light.constantAttenuation = spotlights[8];\n"
+	"        light.linearAttenuation = spotlights[9];\n"
+	"        light.quadraticAttenuation = spotlights[10];\n"
+	"\n"
+	"        vec3 dirToSource = vec3(light.position - pos);\n"
+	"        float distToSource = length(dirToSource);\n"
+	"        NdotL = max(dot(n,normalize(dirToSource)),0.0);\n"
+	"        if (NdotL > 0.0){\n"
+	"            spotEffect = dot(normalize(light.dir), normalize(-dirToSource));\n"
+	"            if (spotEffect > light.cosCutoff){\n"
+	"                spotEffect = pow(spotEffect, light.spotExponent);\n"
+	"	   	 	     att = spotEffect / (light.constantAttenuation +\n"
+	"		 		     light.linearAttenuation * distToSource +\n"
+	"		 		     light.quadraticAttenuation * distToSource * distToSource);\n"
+	"				 color += att * (albedo * NdotL);\n"
+	"          }\n"
+	"       }\n"//end of (NdotL > 0.0)
+	"   }\n"//end of for
+	"   return color;\n"
+	"}\n"//end of function
 };
-
 
 char *get_fancy_lighting_function(void)
 {

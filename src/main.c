@@ -212,6 +212,7 @@ float camang[3], camloc[3] = { 0,0,90 };
 float player_zoom = 1.0;
 float rotate_view = 0.0;
 
+boolean toggleFlashlight;
 
 void camera_to_worldspace(float world[3], float cam_x, float cam_y, float cam_z)
 {
@@ -234,7 +235,10 @@ void camera_to_worldspace(float world[3], float cam_x, float cam_y, float cam_z)
 
 // camera worldspace velocity
 float cam_vel[3];
-float light_pos[3];
+float point_light_pos[3];
+float spot_light_pos[3];
+
+vec3f cam_forward_dir;
 
 int controls;
 
@@ -260,6 +264,8 @@ float pending_view_z;
 
 float light_vel[3];
 
+
+
 void process_tick_raw(float dt)
 {
    int i;
@@ -276,6 +282,9 @@ void process_tick_raw(float dt)
 
    camera_to_worldspace(world_thrust, thrust[0], thrust[1], 0);
    world_thrust[2] += thrust[2];
+
+
+
 
    for (i=0; i < 3; ++i) {
       float acc = world_thrust[i];
@@ -299,9 +308,13 @@ void process_tick_raw(float dt)
    camloc[1] += cam_vel[1] * dt;
    camloc[2] += cam_vel[2] * dt;
 
-   light_pos[0] = camloc[0];//+= light_vel[0] * dt;
-   light_pos[1] = camloc[1];//+= light_vel[1] * dt;
-   light_pos[2] = camloc[2];//+= light_vel[2] * dt;
+   point_light_pos[0] += light_vel[0] * dt;
+   point_light_pos[1] += light_vel[1] * dt;
+   point_light_pos[2] += light_vel[2] * dt;
+
+   spot_light_pos[0] = camloc[0];
+   spot_light_pos[1] = camloc[1];
+   spot_light_pos[2] = camloc[2];
 
    view_x_vel *= (float) pow(0.75, dt);
    view_z_vel *= (float) pow(0.75, dt);
@@ -402,7 +415,7 @@ void draw_spotlight_gizmo(vec3f pos,
 	float cutOff,
 	vec3f color)
 {
-	float theta = 2 * PI / (float)(100);
+	float theta = 2 * (float)PI / (float)(100);
 	float c = cosf(theta);//precalculate the sine and cosine
 	float s = sinf(theta);
 	float t;
@@ -410,17 +423,14 @@ void draw_spotlight_gizmo(vec3f pos,
 	float x = radius;//we start at angle = 0 
 	float y = 0;
 
-	vec3f defaultLookDir;
-	defaultLookDir.x = 0;
-	defaultLookDir.y = 0;
-	defaultLookDir.z = 1;
+	vec3f defaultLookDir = Vec3f(0,0,1);
 
 
 	float dotResult = vec3f_dot_product(defaultLookDir, dir);
 	float defaultLookDirLength = 1;//assumed
 	float lookDirLength = vec3f_length(dir);//we should probably normalize this to a unit vector?
 	float angleBetween = acosf(dotResult / (defaultLookDirLength * lookDirLength));//in radians
-	float angleBetweenDegrees = angleBetween * rad2deg;//rad to degrees, this is probably #defined somewhere...
+	float angleBetweenDegrees = angleBetween * (float)rad2deg;//rad to degrees, this is probably #defined somewhere...
 
 	vec3f crossProd = vec3f_cross_product(defaultLookDir, dir);
 
@@ -449,24 +459,14 @@ void draw_spotlight_gizmo(vec3f pos,
 	glPopMatrix();
 }
 
+
 void render_objects(void)
 {
    glColor3f(1,1,1);
    glDisable(GL_TEXTURE_2D);
-   vec3f spotlight_gizmo_pos;
-   spotlight_gizmo_pos.x = 0;
-   spotlight_gizmo_pos.y = 0;
-   spotlight_gizmo_pos.z = 120;
-
-   vec3f spotlight_gizmo_dir;
-   spotlight_gizmo_dir.x = 1;
-   spotlight_gizmo_dir.y = 0;
-   spotlight_gizmo_dir.z = 0;
-
-   vec3f color;
-   color.x = 0;
-   color.y = 1;
-   color.z = 0;
+   vec3f spotlight_gizmo_pos = Vec3f(0,0,120);
+   vec3f spotlight_gizmo_dir = Vec3f(1,0,0);
+   vec3f color = Vec3f(0,1,0);
 
    draw_spotlight_gizmo(
 	   spotlight_gizmo_pos, //pos
@@ -474,7 +474,18 @@ void render_objects(void)
 	   5, 10,
 	   color);   //radius and cutoff
 
-   //stbgl_drawBox(light_pos[0], light_pos[1], light_pos[2], 3,3,3, 0);
+
+   if (toggleFlashlight)
+   {
+		camera_to_worldspace(cam_forward_dir.E, 0, 1, 0);
+   }
+   else
+   {
+	   cam_forward_dir = Vec3f(0, 0, 0);
+   }
+	//stbgl_drawBox(camloc[0] + forwardDir[0] * 10, camloc[1] + forwardDir[1] * 10, camloc[2] + forwardDir[2] * 10, 1, 1, 1, 1);
+
+   //stbgl_drawBox(point_light_pos[0], point_light_pos[1], point_light_pos[2], 3,3,3, 0);
 }
 
 
@@ -493,7 +504,7 @@ void draw_main(void)
    #endif
    glDepthMask(GL_TRUE);
    glDisable(GL_SCISSOR_TEST);
-   glClearColor(0.6f,0.7f,0.9f,0.0f);
+   glClearColor(0.1f,0.1f,0.1f,0.0f);
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -664,6 +675,7 @@ void  process_sdl_mouse(SDL_Event *e)
    update_view((float) e->motion.xrel / screen_x, (float) e->motion.yrel / screen_y);
 }
 
+
 void process_event(SDL_Event *e)
 {
    switch (e->type) {
@@ -708,9 +720,11 @@ void process_event(SDL_Event *e)
          if (k == '2') global_hack = -1;
          if (s == SDL_SCANCODE_R) {
             camera_to_worldspace(light_vel, 0,32,0);
-            memcpy(light_pos, camloc, sizeof(light_pos));
+            memcpy(point_light_pos, camloc, sizeof(point_light_pos));
          }
-
+		 if (s == SDL_SCANCODE_F) {
+			 toggleFlashlight = !toggleFlashlight;
+		 }
          #if 0
          if (game_mode == GAME_editor) {
             switch (k) {
