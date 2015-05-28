@@ -1,14 +1,8 @@
-overall lighting todos
-
-spotlights and point lights at the same time
-colored lights
-
---------------------------------------------
-
 spotlight todos
 
+colored spotlights
 reconcile gizmo with actual spotlight
-more user friendly struct interface, should be able to get it down to
+more user friendly C interface, should be able to get it down to
 
 pos
 dir
@@ -18,7 +12,7 @@ color
 intensity
 
 multiple spotlights at once
-cookie tex for that crummy $1 flashlight look maybe
+cookie texture for that crummy $1 flashlight look?
 
 --------------------------------------------
 
@@ -27,5 +21,5 @@ point light todos
 multiple pointlights at once
 colored pointlights
 more granular control of size, falloff
-cookie?
+cookie texture? Would be cool for lamps
 
