@@ -4,6 +4,7 @@
 #include <assert.h>
 #include "vector_math.h"
 
+typedef int Bool;
 #define true   (0==0)
 #define false  (0==1)
 
