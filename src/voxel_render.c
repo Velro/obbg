@@ -348,7 +348,7 @@ void render_voxel_world(float campos[3])
       lighting[1][0] *= bright;
       lighting[1][1] *= bright;
       lighting[1][2] *= bright;
-      stbglUniform3fv(stbgl_find_uniform(main_prog, "light_source"), 2, lighting[0]);
+      stbglUniform3fv(stbgl_find_uniform(main_prog, "pointlight"), 2, lighting[0]);
    }
 
    {
@@ -362,7 +362,7 @@ void render_voxel_world(float campos[3])
 	   spot.quadraticAttenuation = 0.01f;
 							   
 	   //spotlights = spot;
-	   stbglUniform1fv(stbgl_find_uniform(main_prog, "spotlights"), 11, &spot.E[0]);
+	   stbglUniform1fv(stbgl_find_uniform(main_prog, "spotlight"), 11, &spot.E[0]);
    }
    quads_rendered = 0;
    quads_considered = 0;

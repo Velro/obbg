@@ -483,9 +483,7 @@ void render_objects(void)
    {
 	   cam_forward_dir = Vec3f(0, 0, 0);
    }
-	//stbgl_drawBox(camloc[0] + forwardDir[0] * 10, camloc[1] + forwardDir[1] * 10, camloc[2] + forwardDir[2] * 10, 1, 1, 1, 1);
-
-   //stbgl_drawBox(point_light_pos[0], point_light_pos[1], point_light_pos[2], 3,3,3, 0);
+   stbgl_drawBox(point_light_pos[0], point_light_pos[1], point_light_pos[2], 3,3,3, 0);
 }
 
 
