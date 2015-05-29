@@ -31,8 +31,6 @@
 
 #include "obbg_funcs.h"
 
-#include "vector_math.h"
-
 char *game_name = "obbg";
 
 
@@ -240,7 +238,7 @@ float cam_vel[3];
 float point_light_pos[3];
 float spot_light_pos[3];
 
-vec3f cam_forward_dir;
+float cam_forward_dir[3];
 
 int controls;
 
@@ -411,79 +409,21 @@ void stbgl_drawRectTCArray(float x0, float y0, float x1, float y1, float s0, flo
    glEnd();
 }
 
-void draw_spotlight_gizmo(vec3f pos,
-	vec3f dir,
-	float radius,
-	float cutOff,
-	vec3f color)
-{
-	float theta = 2 * (float)PI / (float)(100);
-	float c = cosf(theta);//precalculate the sine and cosine
-	float s = sinf(theta);
-	float t;
-
-	float x = radius;//we start at angle = 0 
-	float y = 0;
-
-	vec3f defaultLookDir = Vec3f(0,0,1);
-
-
-	float dotResult = vec3f_dot_product(defaultLookDir, dir);
-	float defaultLookDirLength = 1;//assumed
-	float lookDirLength = vec3f_length(dir);//we should probably normalize this to a unit vector?
-	float angleBetween = acosf(dotResult / (defaultLookDirLength * lookDirLength));//in radians
-	float angleBetweenDegrees = angleBetween * (float)rad2deg;//rad to degrees, this is probably #defined somewhere...
-
-	vec3f crossProd = vec3f_cross_product(defaultLookDir, dir);
-
-	glPushMatrix();
-	glColor3f(color.x, color.y, color.z);
-
-	glTranslatef(pos.x, pos.y, pos.z);
-	stbgl_drawBox(0, 0, 0, 1, 1, 1, 1);
-	glRotatef(angleBetweenDegrees, crossProd.x, crossProd.y, crossProd.z);
-	glTranslatef(0, 0, cutOff);
-
-	stbgl_drawBox(0, 0, 0, 1, 1, 1, 1);
-
-	glBegin(GL_LINE_LOOP);
-	for (int ii = 0; ii < 100; ii++)
-	{
-		glVertex3f(x, y, 0);//output vertex 
-
-		//apply the rotation matrix
-		t = x;
-		x = c * x - s * y;
-		y = s * t + c * y;
-	}
-	glEnd();
-	glColor3f(1, 1, 1);
-	glPopMatrix();
-}
-
 
 void render_objects(void)
 {
    glColor3f(1,1,1);
    glDisable(GL_TEXTURE_2D);
-   vec3f spotlight_gizmo_pos = Vec3f(0,0,120);
-   vec3f spotlight_gizmo_dir = Vec3f(1,0,0);
-   vec3f color = Vec3f(0,1,0);
-
-   draw_spotlight_gizmo(
-	   spotlight_gizmo_pos, //pos
-	   spotlight_gizmo_dir,   //dir
-	   5, 10,
-	   color);   //radius and cutoff
-
 
    if (toggleFlashlight)
    {
-		camera_to_worldspace(cam_forward_dir.E, 0, 1, 0);
+		camera_to_worldspace(cam_forward_dir, 0, 1, 0);
    }
    else
    {
-	   cam_forward_dir = Vec3f(0, 0, 0);
+	   cam_forward_dir[0] = 0;
+	   cam_forward_dir[1] = 0;
+	   cam_forward_dir[2] = 0;
    }
    stbgl_drawBox(point_light_pos[0], point_light_pos[1], point_light_pos[2], 3,3,3, 0);
 }

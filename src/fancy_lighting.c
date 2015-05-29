@@ -2,7 +2,6 @@
 #include "obbg_data.h"
 #include "obbg_funcs.h"
 #include "stb_voxel_render.h"
-#include "vector_math.h"
 
 static char* fancy_lighting = {
 	"\n" //Point light implementation based on http://www.lighthouse3d.com/tutorials/glsl-tutorial/spot-light-per-pixel/
@@ -28,7 +27,6 @@ static char* fancy_lighting = {
 	"    vec3 color = albedo * ambient;\n"
 	"    float att,spotEffect;\n"
 	"    n = normalize(norm);\n"
-	//ugliness ahead
 	"    light.position.x = spotlight[0];\n"
 	"    light.position.y = spotlight[1];\n"
 	"    light.position.z = spotlight[2];\n"
@@ -53,7 +51,7 @@ static char* fancy_lighting = {
 	"	 		     light.quadraticAttenuation * distToSource * distToSource);\n"
 	"    		 color += att * (albedo * NdotL);\n"
 	"       }\n"
-	"    }\n"//end of (NdotL > 0.0)
+	"    }\n"
 	"\n"
 	"\n//point light"
 	"\n"
@@ -62,7 +60,7 @@ static char* fancy_lighting = {
 	"   vec3 diffuse = clamp(pointlight[1] * clamp(lambert, 0.0, 1.0), 0.0, 1.0);\n"
 	"   color += (diffuse + ambient) * albedo;\n"
 	"   return color;\n"
-	"}\n"//end of function
+	"}\n"
 };
 
 char *get_fancy_lighting_function(void)

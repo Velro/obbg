@@ -2,7 +2,6 @@
 #define INCLUDE_OBBG_DATA_H
 
 #include <assert.h>
-#include "vector_math.h"
 
 typedef int Bool;
 #define true   (0==0)
@@ -97,8 +96,8 @@ typedef union
 	float E[11];
 	struct
 	{
-		vec3f pos;
-		vec3f dir;
+		float pos[3];
+		float dir[3];
 		float cosCutOff;//aperture of cone
 		float spotExponent;//falloff from center
 		float constantAttenuation;//depth

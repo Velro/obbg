@@ -17,24 +17,43 @@
 GLuint main_prog;
 static GLuint vox_tex[2];
 
+void cat_strings(int a_count, char *a,
+	int b_count, char *b,
+	int dest_count, char *dest)
+{
+	for (int Index = 0;
+		Index < a_count;
+		++Index)
+	{
+		*dest++ = *a++;
+	}
+
+	for (int Index = 0;
+		Index < b_count;
+		++Index)
+	{
+		*dest++ = *b++;
+	}
+
+	*dest++ = 0;
+}
+
 void init_voxel_render(int voxel_tex[2])
 {
 	char *binds[] = { "attr_vertex", "attr_face", NULL };
 	char *vertex;
-	char fragment[10000];//TODO better string-foo...
+	char *fragment;
 	char *fancy_lighting_function;
-
+	
 	vertex = stbvox_get_vertex_shader();
-	strcpy(fragment, stbvox_get_fragment_shader());
-
-
+	fragment = stbvox_get_fragment_shader();
 	fancy_lighting_function = get_fancy_lighting_function();
-	strcat(fragment, fancy_lighting_function);
 
+	char *full_frag[] = { fragment, fancy_lighting_function};
 	{
 		char error_buffer[1024];
 		char *main_vertex[] = { vertex, NULL };
-		char *main_fragment[] = { fragment, NULL };
+		char *main_fragment[] = { fragment, fancy_lighting_function, NULL };
 		int which_failed;
 		main_prog = stbgl_create_program(main_vertex, main_fragment, binds, error_buffer, sizeof(error_buffer), &which_failed);
 		if (main_prog == 0) {
@@ -250,7 +269,7 @@ extern int num_threads_active, num_meshes_started, num_meshes_uploaded;
 extern float spot_light_pos[3];
 extern float point_light_pos[3];
 
-extern vec3f cam_forward_dir;
+extern float cam_forward_dir[3];
 
 
 #define MAX_CONSIDER_MESHES 4096
@@ -353,8 +372,12 @@ void render_voxel_world(float campos[3])
 
    {
 	   spotlight spot;
-	   spot.pos = Vec3f(spot_light_pos[0], spot_light_pos[1], spot_light_pos[2]);
-	   spot.dir = cam_forward_dir;
+	   spot.pos[0] = spot_light_pos[0];
+	   spot.pos[1] = spot_light_pos[1];
+	   spot.pos[2] = spot_light_pos[2];
+	   spot.dir[0] = cam_forward_dir[0];
+	   spot.dir[1] = cam_forward_dir[1];
+	   spot.dir[2] = cam_forward_dir[2];
 	   spot.cosCutOff = 0.9f;
 	   spot.spotExponent = 80;
 	   spot.constantAttenuation = 0;
@@ -471,23 +494,3 @@ void render_voxel_world(float campos[3])
    stbglUseProgram(0);
 }
 
-void cat_strings(int a_count, char *a,
-	int b_count, char *b,
-	int dest_count, char *dest)
-{
-	for (int Index = 0;
-		Index < a_count;
-		++Index)
-	{
-		*dest++ = *a++;
-	}
-
-	for (int Index = 0;
-		Index < b_count;
-		++Index)
-	{
-		*dest++ = *b++;
-	}
-
-	*dest++ = 0;
-}
