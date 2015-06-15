@@ -3,7 +3,6 @@ Possible tasks to work on next:
    -  add skylight
    -  more work on terrain -- zmc pseudo-wang tile approach
    -  fix depth fighting when far from origin
-   -  check for memory leaks
    -  dynamically set view distance
    -  limit mesh cache to max size
    -  disk save/load
@@ -14,6 +13,8 @@ Possible tasks to work on next:
       - animation? skinning?
       - procedural animation of characters?
    -  physics representation (1 bit per block? run-length? 1-byte min, 1-byte max, bits within that range?)
+      - 1 byte length
+      - 1 byte type
    -  "physics" (e.g. move on ground, needs physics rep)
    -  raycast (needs physics rep)
    -  use more block types
@@ -25,8 +26,10 @@ Possible tasks to work on next:
    -  add better lighting
    -  optimize mesh building
    -  optimize terrain generation
+   -  check for memory leaks
 
 Not right now:
 
+   -  check "voxel_world_vheight_spiky.avi" for terrain inspiration
    -  shoot guns
    -  networking

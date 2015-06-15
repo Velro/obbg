@@ -9,6 +9,10 @@ obbg:
   - networking
 
 Done in today's stream:
+   -  Tree layout, no grid artifacts
+   -  Tree tops
+
+Previous stream:
    -  fix lighting bug
    -  change lighting to not be height-field based
    -  partial work on new tree layout

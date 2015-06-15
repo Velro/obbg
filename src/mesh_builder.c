@@ -166,9 +166,14 @@ mesh_chunk *get_mesh_chunk_for_coord(int x, int y)
 
 void free_mesh_chunk(mesh_chunk *mc)
 {
+   int i;
+
    glDeleteTextures(1, &mc->fbuf_tex);
    glDeleteBuffersARB(1, &mc->vbuf);
    glDeleteBuffersARB(1, &mc->fbuf);
+
+   for (i=0; i < stb_arr_len(mc->allocs); ++i)
+      free(mc->allocs[i]);
 }
 
 gen_chunk_cache *get_gen_chunk_cache_for_coord(int x, int y)
@@ -234,7 +239,7 @@ void free_gen_chunk(gen_chunk_cache *gcc)
 }
 
 #define MIN_GROUND 32
-#define AVG_GROUND 64
+#define AVG_GROUND 72
 
 float octave_multiplier[8] =
 {
@@ -283,6 +288,21 @@ void build_column(gen_chunk *gc, int x, int y, int z0, int z1, int bt)
          gc->partial[z >> Z_SEGMENT_SIZE_LOG2].block[y][x][z & 15] = bt;
 }
 
+void build_disk(gen_chunk *gc, float x, float y, int z, float radius, int bt)
+{
+   int ix,iy;
+   int x0,y0,x1,y1;
+   x0 = (int) floor(x - radius);
+   y0 = (int) floor(y - radius);
+   x1 = (int) ceil(x + radius);
+   y1 = (int) ceil(y + radius);
+   for (ix=x0; ix <= x1; ++ix)
+      for (iy=y0; iy <= y1; ++iy)
+         if (ix >= 0 && ix < GEN_CHUNK_SIZE_X && iy >= 0 && iy < GEN_CHUNK_SIZE_Y)
+            if ((ix-x)*(ix-x)+(iy-y)*(iy-y) <= radius*radius)
+               gc->partial[z >> Z_SEGMENT_SIZE_LOG2].block[iy][ix][z & 15] = bt;
+}
+
 //  m = minimum spacing between trees
 //  e = edge-generation "radius"
 //  c = corner-generation "radius"
@@ -306,6 +326,7 @@ void build_column(gen_chunk *gc, int x, int y, int z0, int z1, int bt)
 typedef struct
 {
    int x,y;
+   int type;
 } tree_location;
 
 #define MAX_TREES_PER_AREA   6
@@ -321,10 +342,28 @@ static int random_5[16] = { -2,-1,0,1,2, -2,1,0,1,2, -2,1,0,1,2, 0 };
 #define TREE_MIN_SPACING   6
 #define TREE_EDGE_SIZE     3
 
-static void add_tree(tree_area_data *tad, int x, int y)
+static void add_tree(tree_area_data *tad, int x, int y, int type)
 {
-   tree_location tl = { x,y };
+   tree_location tl = { x,y, type };
    tad->trees[tad->num_trees++] = tl;
+}
+
+Bool collides_raw(tree_location *trees, int n, int x, int y)
+{
+   int i;
+   for (i=0; i < n; ++i) {
+      int sx = x - trees[i].x;
+      int sy = y - trees[i].y;
+      if (abs(sx) < TREE_MIN_SPACING && abs(sy) < TREE_MIN_SPACING)
+         if (sx*sx + sy*sy < TREE_MIN_SPACING * TREE_MIN_SPACING)
+            return true;
+   }
+   return false;
+}
+
+Bool collides(tree_area_data *tad, int x, int y)
+{
+   return collides_raw(tad->trees, tad->num_trees, x, y);
 }
 
 tree_area_data generate_trees_for_corner(int x, int y)
@@ -347,23 +386,11 @@ tree_area_data generate_trees_for_corner(int x, int y)
          n >>= 4;
          if (tx >= bx - TREE_CORNER_SIZE && tx < bx + TREE_CORNER_SIZE &&
              ty >= by - TREE_CORNER_SIZE && ty < by + TREE_CORNER_SIZE)
-            add_tree(&tad, tx,ty);
+            if (!collides(&tad, tx, ty))
+               add_tree(&tad, tx,ty, BT_marble);
       }
    }
    return tad;
-}
-
-Bool collides(tree_area_data *tad, int x, int y)
-{
-   int i;
-   for (i=0; i < tad->num_trees; ++i) {
-      int sx = x - tad->trees[i].x;
-      int sy = y - tad->trees[i].y;
-      if (abs(sx) < TREE_MIN_SPACING && abs(sy) < TREE_MIN_SPACING)
-         if (sx*sx + sy*sy < TREE_MIN_SPACING * TREE_MIN_SPACING)
-            return true;
-   }
-   return false;
 }
 
 tree_area_data generate_trees_for_horizontal_edge_raw(int ex, int ey, tree_area_data *c1, tree_area_data *c2, uint32 seed)
@@ -390,7 +417,7 @@ tree_area_data generate_trees_for_horizontal_edge_raw(int ex, int ey, tree_area_
       tad.num_trees = 0;
       x_mid = (int) stb_linear_remap((n&255),0,255, x_left, x_right); n >>= 8;
       y_mid = ey - 2 + (n & 3); n >>= 2;
-      add_tree(&tad, x_mid, y_mid);
+      add_tree(&tad, x_mid, y_mid, BT_gravel);
    } else {
       x_mid = (x_left + x_right) + ((n & 7) - 4); n >>= 3;
       y_mid = ey - 2 + (n & 3); n >>= 2;
@@ -401,10 +428,10 @@ tree_area_data generate_trees_for_horizontal_edge_raw(int ex, int ey, tree_area_
          x_mid = x_right - TREE_MIN_SPACING;
 
       tad.num_trees = 0;
-      add_tree(&tad, x_left, y_left);
+      add_tree(&tad, x_left, y_left, BT_gravel);
       if (x_mid >= x_left + TREE_MIN_SPACING)
-         add_tree(&tad, x_mid, y_mid);
-      add_tree(&tad, x_right, y_right);
+         add_tree(&tad, x_mid, y_mid, BT_gravel);
+      add_tree(&tad, x_right, y_right, BT_gravel);
    }
    return tad;
 }
@@ -446,8 +473,9 @@ static int add_trees(tree_location trees[], int num, tree_area_data *tad)
 }
 
 // returns number of trees
-int generate_trees_for_chunk(tree_location trees[], int x, int y)
+int generate_trees_for_chunk(tree_location trees[], int x, int y, int limit)
 {
+   int i;
    int num=0;
    tree_area_data c00,c01,c10,c11;
    tree_area_data ee,en,ew,es;
@@ -471,10 +499,41 @@ int generate_trees_for_chunk(tree_location trees[], int x, int y)
    num = add_trees(trees, num, &ew);
    num = add_trees(trees, num, &es);
 
+   for (i=0; i < 40; ++i) {
+      int r = flat_noise32_weak(x, y, 838383+i);
+      int tx = r & (GEN_CHUNK_SIZE_X-1);
+      int ty = (r>>16) & (GEN_CHUNK_SIZE_Y-1);
+
+      if (   tx >= TREE_EDGE_SIZE && tx < GEN_CHUNK_SIZE_X - TREE_EDGE_SIZE
+          && ty >= TREE_EDGE_SIZE && ty < GEN_CHUNK_SIZE_Y - TREE_EDGE_SIZE) {
+         tx += x;
+         ty += y;
+         if (!collides_raw(trees, num, tx, ty)) {
+            trees[num].x = tx;
+            trees[num].y = ty;
+            trees[num].type = BT_wood;
+            ++num;
+            if (num >= limit)
+               break;
+         }
+      }
+   }
+
    return num;
 }
 
-#define MAX_TREES_PER_CHUNK ((GEN_CHUNK_SIZE_X / TREE_MIN_SPACING)*(GEN_CHUNK_SIZE_Y / TREE_MIN_SPACING))
+#define MAX_TREES_PER_CHUNK  100
+
+static float tree_shape_function(float pos)
+{
+   if (pos < 0.25) {
+      pos *= 4;
+      return 1.0f-(float)sqrt(1.0f-pos*pos);
+   } else {
+      pos = stb_linear_remap(pos, 0.25f, 1.0f, 0.0f, 1.0f);
+      return 1.0f-pos;
+   }
+}
 
 gen_chunk *generate_chunk(int x, int y)
 {
@@ -534,7 +593,7 @@ gen_chunk *generate_chunk(int x, int y)
       }
    }
 
-   num_trees = generate_trees_for_chunk(trees, x, y);
+   num_trees = generate_trees_for_chunk(trees, x, y, MAX_TREES_PER_CHUNK);
    for (i=0; i < num_trees; ++i) {
       int bx = trees[i].x;
       int by = trees[i].y;
@@ -545,17 +604,62 @@ gen_chunk *generate_chunk(int x, int y)
          if (height_lerp[ty+4][tx+4] < 0.5) {
             uint32 r = flat_noise32_strong(bx, by, 8989);
             int ht = height_field_int[ty+4][tx+4];
-            int tree_height = (r % 6) + 4;
-            int leaf_ht = ht + (tree_height>>1);
-            build_column(gc, tx, ty, ht, ht+tree_height, BT_wood);
+            int tree_height = (r % 4) + 8;
+            int leaf_bottom = ht + (tree_height>>1);
+            int leaf_top = ht + tree_height + (ht + tree_height - leaf_bottom);
+            float px,py, dx,dy;
+            float tree_width = 3.5;
 
+            leaf_top += 3;
+            leaf_bottom += 3;
+
+            r >>= 2;
+            tree_width = stb_linear_remap((r&15), 0, 15, 2.5f, 3.9f); r >>= 4;
+            dx = (float) ((int) (r & 255) - 128); r >>= 8;
+            dy = (float) ((int) (r & 255) - 128); r >>= 8;
+
+            assert(dx >= -128 && dx <= 127);
+            assert(dy >= -128 && dy <= 127);
+
+            dx /= 512.0f;
+            dy /= 512.0f;
+
+            assert(dx >= -0.25f && dx <= 0.25);
+            assert(dy >= -0.25f && dy <= 0.25);
+
+            #if 0
+            dx = 0.15f;
+            dy = 0.15f;
+            #endif
+
+
+            px = (float) tx;
+            py = (float) ty;
+            for (z=leaf_bottom; z <= leaf_top; ++z) {
+               float radius = tree_width * tree_shape_function(stb_linear_remap(z, leaf_bottom, leaf_top, 0.05f, 0.95f));
+               build_disk(gc, px,py, z, radius, BT_leaves);
+               px += dx;
+               py += dy;
+            }
+
+            #if 0
             build_column(gc, tx+1, ty, leaf_ht+2, ht+tree_height+1, BT_leaves);
             build_column(gc, tx, ty+1, leaf_ht+2, ht+tree_height+1, BT_leaves);
             build_column(gc, tx-1, ty, leaf_ht+2, ht+tree_height+1, BT_leaves);
             build_column(gc, tx, ty-1, leaf_ht+2, ht+tree_height+1, BT_leaves);
+            #endif
+
+            build_column(gc, tx, ty, ht, ht+tree_height, BT_wood);
          }
       }
    }
+
+   #if 0
+   for (j=0; j < GEN_CHUNK_SIZE_Y; ++j)
+      for (i=0; i < GEN_CHUNK_SIZE_X; ++i)
+         if (i == 0 || i == GEN_CHUNK_SIZE_X-1 || j == 0 || j == GEN_CHUNK_SIZE_Y-1)
+            build_column(gc, i,j, height_field_int[j+4][i+4], height_field_int[j+4][i+4]+1, BT_sand);
+   #endif
 
    #if 0
    for (j = -4; j < GEN_CHUNK_SIZE_Y+4; j += 8) {
@@ -688,6 +792,87 @@ void copy_chunk_set_to_segment(chunk_set *chunks, int z_seg, build_data *bd)
       }
 }
 
+void *arena_alloc(arena_chunk ***chunks, size_t size, size_t arena_chunk_size)
+{
+   void *p;
+   arena_chunk **ac = *chunks;
+   arena_chunk *cur = ac == NULL ? NULL : stb_arr_last(ac);
+   if (stb_arr_len(ac) == 0)
+      goto alloc;
+   if (cur->in_use + size > cur->capacity) {
+      ac=ac;
+     alloc:
+      arena_chunk_size = stb_max(size, arena_chunk_size);
+      cur = malloc(arena_chunk_size + sizeof(arena_chunk)-1);
+      cur->capacity = arena_chunk_size;
+      cur->in_use = 0;
+      stb_arr_push(ac, cur);  
+      *chunks = ac;
+      cur = stb_arr_last(ac);
+   } else {
+      cur = cur;
+   }
+
+   assert(cur->in_use + size <= cur->capacity);
+   p = cur->data + cur->in_use;
+   cur->in_use += size;
+   return p;
+}
+
+// release unused memory from end of last allocation
+void arena_release(arena_chunk **chunks, size_t size)
+{
+   stb_arr_last(chunks)->in_use -= size;
+}
+
+void arena_free_all(arena_chunk **chunks)
+{
+   int i;
+   for (i=0; i < stb_arr_len(chunks); ++i)
+      free(chunks[i]);
+   stb_arr_free(chunks);
+}
+
+phys_chunk_run *build_phys_column(mesh_chunk *mc, gen_chunk *gc, int x, int y)
+{
+   phys_chunk_run *pr = arena_alloc(&mc->allocs, MAX_Z*2, 8192);
+   int z,data_off=0;
+   int run_length = 1;
+   for (z=1; z < 255; ++z) {
+      int prev_type = gc->partial[(z-1)>>4].block[y][x][(z-1)&15] != BT_empty;
+      int type = gc->partial[z>>4].block[y][x][z&15] != BT_empty;
+      if (type != prev_type) {
+         pr[data_off].type = prev_type;
+         pr[data_off].length = run_length;
+         run_length = 1;
+         ++data_off;
+      } else   
+         ++run_length;
+   }
+   pr[data_off].type = (gc->partial[(z-1)>>4].block[y][x][(z-1)&15] != BT_empty);
+   pr[data_off].length = run_length;
+   ++data_off;
+
+   arena_release(mc->allocs, MAX_Z*2 - data_off*2);
+   return pr;
+}
+
+void build_phys_chunk(mesh_chunk *mc, chunk_set *chunks)
+{
+   int j,i,x,y;
+   mc->allocs = NULL;
+   for (j=1; j <= 2; ++j) {
+      for (i=1; i <= 2; ++i) {
+         int x_off = (i-1) * GEN_CHUNK_SIZE_X;
+         int y_off = (j-1) * GEN_CHUNK_SIZE_Y;
+
+         for (y=0; y < GEN_CHUNK_SIZE_Y; ++y)
+            for (x=0; x < GEN_CHUNK_SIZE_X; ++x)
+               mc->pc.column[y_off+y][x_off+x] = build_phys_column(mc, chunks->chunk[j][i], x,y);
+      }
+   }
+}
+
 void generate_mesh_for_chunk_set(stbvox_mesh_maker *mm, mesh_chunk *mc, vec3i world_coord, chunk_set *chunks, size_t build_size, build_data *bd)
 {
    int a,b,z;
@@ -701,6 +886,8 @@ void generate_mesh_for_chunk_set(stbvox_mesh_maker *mm, mesh_chunk *mc, vec3i wo
    mc->chunk_y = (world_coord.y >> MESH_CHUNK_SIZE_Y_LOG2);
 
    stbvox_set_input_stride(mm, 18, 66*18);
+
+   build_phys_chunk(mc, chunks);
 
    map = stbvox_get_input_description(mm);
    map->block_tex1_face = tex1_for_blocktype;
@@ -777,7 +964,6 @@ void set_mesh_chunk_for_coord(int x, int y, mesh_chunk *new_mc)
    }
 
    *mc = *new_mc;
-   free(new_mc);
 }
 
 
@@ -819,24 +1005,7 @@ mesh_chunk *build_mesh_chunk_for_coord(int x, int y)
    return mc;
 }
 
-
-/*
-         SDL_SemPost(mw->request_received);
-      SDL_SemWait(mw->request_received);
-      SDL_LockMutex(chunk_cache_mutex);
-      for (j=0; j < 4; ++j)
-         for (i=0; i < 4; ++i) {
-            deref_fastchunk(mw->chunks[j][i]);
-            mw->chunks[j][i] = NULL;
-         }
-      SDL_UnlockMutex(chunk_cache_mutex);
-      data->request_received = SDL_CreateSemaphore(0);
-      data->chunk_server_done_processing = SDL_CreateSemaphore(0);
-      SDL_CreateThread(mesh_worker_handler, "mesh worker", data);
-   int num_proc = SDL_GetCPUCount();
-*/
-
-#define MAX_MESH_WORKERS 24
+#define MAX_MESH_WORKERS 8
 
 enum
 {
